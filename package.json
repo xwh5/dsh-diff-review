@@ -1,6 +1,6 @@
 {
   "name": "dsh-diff-review",
-  "version": "1.0.2",
+  "version": "1.0.3",
   "description": "DeepSeek Harness 会话修改审查：追踪会话内 write/edit 工具调用，集成 diff2html 实现 VS Code 风格 side-by-side diff 对比，自动跟随系统主题；会话隔离、子代理聚合、SSE 实时推送。",
   "type": "module",
   "main": "lib/index.js",

@@ -153,4 +153,60 @@ describe('serialize/loadSessions round-trip', () => {
     assert.equal(m.size, 0);
     try { unlinkSync(f); } catch {}
   });
+  it('migrates all-zero turn to 1 for visibility', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'drv-'));
+    const f = join(tmp, 'state.json');
+    const raw = {
+      version: 1,
+      sessions: {
+        sessZero: {
+          files: {
+            '/tmp/b.txt': {
+              path: '/tmp/b.txt',
+              cwd: '/tmp',
+              ops: [
+                { kind: 'edit', at: 1, turn: 0, before: 'a', after: 'b', oldString: 'a', newString: 'b' },
+                { kind: 'edit', at: 2, turn: 0, before: 'b', after: 'c', oldString: 'b', newString: 'c' }
+              ]
+            }
+          }
+        }
+      }
+    };
+    writeFileSync(f, JSON.stringify(raw), 'utf8');
+    const m = new Map();
+    loadSessions(m, f);
+    const rec = m.get('sessZero').get('/tmp/b.txt');
+    assert.equal(rec.ops[0].turn, 1);
+    assert.equal(rec.ops[1].turn, 1);
+    try { unlinkSync(f); } catch {}
+  });
+  it('does not migrate mixed zero/non-zero', () => {
+    const tmp = mkdtempSync(join(tmpdir(), 'drv-'));
+    const f = join(tmp, 'state.json');
+    const raw = {
+      version: 1,
+      sessions: {
+        sessMixed: {
+          files: {
+            '/tmp/c.txt': {
+              path: '/tmp/c.txt',
+              cwd: '/tmp',
+              ops: [
+                { kind: 'edit', at: 1, turn: 0, before: 'a', after: 'b', oldString: 'a', newString: 'b' },
+                { kind: 'edit', at: 2, turn: 5, before: 'b', after: 'c', oldString: 'b', newString: 'c' }
+              ]
+            }
+          }
+        }
+      }
+    };
+    writeFileSync(f, JSON.stringify(raw), 'utf8');
+    const m = new Map();
+    loadSessions(m, f);
+    const rec = m.get('sessMixed').get('/tmp/c.txt');
+    assert.equal(rec.ops[0].turn, 0);
+    assert.equal(rec.ops[1].turn, 5);
+    try { unlinkSync(f); } catch {}
+  });
 });

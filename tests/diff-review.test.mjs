@@ -1,9 +1,32 @@
 import assert from 'node:assert/strict';
 import { describe, it } from 'node:test';
-import { cap, splitLines, diffLines, diffHunks, merge3, serializeSessions, loadSessions } from '../lib/index.js';
+import { cap, splitLines, diffLines, diffHunks, merge3, nextFallbackTurn, serializeSessions, loadSessions } from '../lib/index.js';
 import { writeFileSync, readFileSync, unlinkSync, mkdtempSync } from 'node:fs';
 import { join } from 'node:path';
 import { tmpdir } from 'node:os';
+
+describe('nextFallbackTurn', () => {
+  it('fresh (no prev) -> base+1', () => {
+    assert.equal(nextFallbackTurn(null, 0, Date.now(), 600000), 1);
+    assert.equal(nextFallbackTurn(null, 7, Date.now(), 600000), 8);
+  });
+  it('same window -> reuse same turn (同一轮多文件归一组)', () => {
+    const now = Date.now();
+    const prev = { turn: 3, at: now - 1000 };
+    assert.equal(nextFallbackTurn(prev, 2, now, 600000), 3);
+    assert.equal(nextFallbackTurn(prev, 3, now, 600000), 3);
+  });
+  it('window expired -> advance to prev+1', () => {
+    const now = Date.now();
+    const prev = { turn: 3, at: now - 700000 };
+    assert.equal(nextFallbackTurn(prev, 3, now, 600000), 4);
+  });
+  it('base ahead of prev -> base+1', () => {
+    const now = Date.now();
+    const prev = { turn: 1, at: now - 1000 };
+    assert.equal(nextFallbackTurn(prev, 5, now, 600000), 6);
+  });
+});
 
 describe('cap', () => {
   it('truncates to MAX_CHARS', () => {
